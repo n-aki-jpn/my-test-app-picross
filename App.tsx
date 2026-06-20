@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert, SafeAreaView, ScrollView, Dimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
-// 💡 外出ししたステージデータをインポート
-import { STAGES } from './stages';
+// 外出ししたステージデータをインポート
+import { STAGES, Stage } from './stages';
 
 // 画面の横幅を取得
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -14,81 +14,104 @@ type CellState = 0 | 1 | 2;
 // 操作モード
 type PlayMode = 'fill' | 'cross';
 
+// 画面切り替え用の型
+type ScreenMode = 'menu' | 'game';
+
+// 配列をランダムにシャッフルする関数 (フィッシャー–イェーツのシャッフル)
+const shuffleArray = (array: Stage[]): Stage[] => {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+};
+
 export default function App() {
+  // 画面遷移管理
+  const [screen, setScreen] = useState<ScreenMode>('menu');
+  
+  // ゲーム用状態管理
+  const [shuffledStages, setShuffledStages] = useState<Stage[]>([]);
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
   const [playMode, setPlayMode] = useState<PlayMode>('fill');
   const [board, setBoard] = useState<CellState[][]>([]);
   const [isCleared, setIsCleared] = useState(false);
 
-  const stage = STAGES[currentStageIndex];
+  // 現在のステージオブジェクト
+  const stage = shuffledStages[currentStageIndex];
   
-  // 💡 追加：外出しされた文字列の配列を、ロジックが扱える0と1の2次元配列に自動変換する
-  const stageGrid = stage.pattern.map(row => 
+  // 文字列パターンを0と1の2次元配列に自動変換する
+  const stageGrid = stage ? stage.pattern.map(row => 
     row.split('').map(char => char === '#' ? 1 : 0)
-  );
+  ) : [];
 
-  // 盤面の縦横サイズを動的に取得
+  // 盤面の縦横サイズ
   const numRows = stageGrid.length;
-  const numCols = stageGrid[0].length;
+  const numCols = stageGrid[0] ? stageGrid[0].length : 0;
 
-  // 新しいステージのロード
-  const initGame = (stageIndex: number) => {
-    const s = STAGES[stageIndex];
-    // 切り替え先のステージの文字列パターンを0/1配列に変換してサイズを計測
-    const sGrid = s.pattern.map(row => row.split('').map(char => char === '#' ? 1 : 0));
+  // メニューからサイズを選んでゲームを開始する
+  const handleSelectSize = (size: 5 | 8 | 10) => {
+    // 該当サイズの問題のみ抽出
+    const filtered = STAGES.filter(s => s.size === size);
+    // ランダムにシャッフル
+    const shuffled = shuffleArray(filtered);
+    
+    setShuffledStages(shuffled);
+    setCurrentStageIndex(0);
+    setIsCleared(false);
+    setPlayMode('fill');
+    
+    // 最初のステージの盤面を初期化
+    const firstGrid = shuffled[0].pattern.map(row => row.split('').map(char => char === '#' ? 1 : 0));
+    const initialBoard = Array(firstGrid.length)
+      .fill(null)
+      .map(() => Array(firstGrid[0].length).fill(0));
+    setBoard(initialBoard);
+    
+    setScreen('game');
+  };
+
+  // ステージ単体を初期化（「リセット」や「次へ」の時用）
+  const initGame = (stageIndex: number, currentList: Stage[]) => {
+    const targetStage = currentList[stageIndex];
+    if (!targetStage) return;
+
+    const sGrid = targetStage.pattern.map(row => row.split('').map(char => char === '#' ? 1 : 0));
     const initialBoard = Array(sGrid.length)
       .fill(null)
       .map(() => Array(sGrid[0].length).fill(0));
+    
     setBoard(initialBoard);
     setIsCleared(false);
     setCurrentStageIndex(stageIndex);
   };
 
-  useEffect(() => {
-    initGame(currentStageIndex);
-  }, [currentStageIndex]);
-
-  // ヒント数字の計算 (連続する1の数をカウント)
+  // ヒント数字の計算
   const getRowHints = (grid: number[][]) => {
     return grid.map((row) => {
       const hints: number[] = [];
       let count = 0;
       row.forEach((cell) => {
-        if (cell === 1) {
-          count++;
-        } else {
-          if (count > 0) {
-            hints.push(count);
-            count = 0;
-          }
-        }
+        if (cell === 1) count++;
+        else if (count > 0) { hints.push(count); count = 0; }
       });
-      if (count > 0) {
-        hints.push(count);
-      }
+      if (count > 0) hints.push(count);
       return hints.length === 0 ? [0] : hints;
     });
   };
 
   const getColHints = (grid: number[][]) => {
     const colHints: number[][] = [];
-    const width = grid[0].length;
+    const width = grid[0] ? grid[0].length : 0;
     for (let c = 0; c < width; c++) {
       const hints: number[] = [];
       let count = 0;
       for (let r = 0; r < grid.length; r++) {
-        if (grid[r][c] === 1) {
-          count++;
-        } else {
-          if (count > 0) {
-            hints.push(count);
-            count = 0;
-          }
-        }
+        if (grid[r][c] === 1) count++;
+        else if (count > 0) { hints.push(count); count = 0; }
       }
-      if (count > 0) {
-        hints.push(count);
-      }
+      if (count > 0) hints.push(count);
       colHints.push(hints.length === 0 ? [0] : hints);
     }
     return colHints;
@@ -97,20 +120,18 @@ export default function App() {
   const rowHints = getRowHints(stageGrid);
   const colHints = getColHints(stageGrid);
 
-  // 最大のヒント数を取得 (レイアウト調整用)
-  const maxRowHintsLength = Math.max(...rowHints.map((h) => h.length));
-  const maxColHintsHeight = Math.max(...colHints.map((h) => h.length));
+  const maxRowHintsLength = rowHints.length > 0 ? Math.max(...rowHints.map((h) => h.length)) : 1;
+  const maxColHintsHeight = colHints.length > 0 ? Math.max(...colHints.map((h) => h.length)) : 1;
 
-  // 動的サイズ計算：画面幅に収まるようマスのサイズ(cellSize)を自動決定
-  const hintAreaWidth = maxRowHintsLength * 16 + 10; // 行ヒントの幅
-  const paddingOffset = 50; // 全体の左右マージン等
+  // マス目のサイズ動的計算
+  const hintAreaWidth = maxRowHintsLength * 16 + 10;
+  const paddingOffset = 50;
   const availableWidth = SCREEN_WIDTH - paddingOffset - hintAreaWidth;
-  const cellSize = Math.min(44, Math.floor(availableWidth / numCols)); // 最大44、細かくなったら縮小
+  const cellSize = numCols > 0 ? Math.min(44, Math.floor(availableWidth / numCols)) : 30;
 
-  // マスをタップしたときの処理
+  // マスタップ
   const handleCellPress = (r: number, c: number) => {
     if (isCleared) return;
-
     const newBoard = board.map((row) => [...row]);
     const currentVal = board[r][c];
 
@@ -119,23 +140,18 @@ export default function App() {
     } else {
       newBoard[r][c] = currentVal === 2 ? 0 : 2;
     }
-
     setBoard(newBoard);
     checkClear(newBoard);
   };
 
-  // クリア判定 (長方形や10x10にも対応できるようnumRows, numColsを使用)
+  // クリア判定
   const checkClear = (currentBoard: CellState[][]) => {
     let clear = true;
     for (let r = 0; r < numRows; r++) {
       for (let c = 0; c < numCols; c++) {
         const target = stageGrid[r][c];
         const player = currentBoard[r][c];
-
-        const playerFilled = player === 1;
-        const targetFilled = target === 1;
-
-        if (playerFilled !== targetFilled) {
+        if ((player === 1) !== (target === 1)) {
           clear = false;
           break;
         }
@@ -145,74 +161,103 @@ export default function App() {
 
     if (clear) {
       setIsCleared(true);
-      Alert.alert('🎉 クリア！', `『${stage.name}』を完成させました！`, [
-        {
-          text: '次のステージへ',
-          onPress: () => {
-            const nextIndex = (currentStageIndex + 1) % STAGES.length;
-            initGame(nextIndex);
+      const isLastStage = currentStageIndex === shuffledStages.length - 1;
+
+      Alert.alert(
+        '🎉 クリア！', 
+        isLastStage 
+          ? `最終問題をクリアしました！全問制覇おめでとうございます！`
+          : `『${stage.name}』を完成させました！ (残り ${shuffledStages.length - 1 - currentStageIndex} 問)`, 
+        [
+          {
+            text: isLastStage ? 'メニューへ戻る' : '次の問題へ',
+            onPress: () => {
+              if (isLastStage) {
+                setScreen('menu');
+              } else {
+                initGame(currentStageIndex + 1, shuffledStages);
+              }
+            },
           },
-        },
-        { text: '閉じる' },
-      ]);
+          { text: '閉じる' },
+        ]
+      );
     }
   };
 
-  // 💡 ステージ切り替え時の盤面初期化ラグによる配列インデックスエラーを防ぐ安全処理
-  if (board.length === 0 || board.length !== numRows || board[0].length !== numCols) return null;
+  // --- メニュー画面の描画 ---
+  if (screen === 'menu') {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar style="light" />
+        <View style={styles.menuContainer}>
+          <Text style={styles.menuTitle}>Pixel Picross</Text>
+          <Text style={styles.menuSubtitle}>サイズを選んでスタート（全問ランダム出題）</Text>
+
+          <View style={styles.menuButtons}>
+            <TouchableOpacity style={[styles.sizeButton, {backgroundColor: '#10b981'}]} onPress={() => handleSelectSize(5)}>
+              <Text style={styles.sizeButtonText}>かんたん (5 × 5)</Text>
+              <Text style={styles.sizeButtonSub}>全10問 / サクッと遊べる</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.sizeButton, {backgroundColor: '#f59e0b'}]} onPress={() => handleSelectSize(8)}>
+              <Text style={styles.sizeButtonText}>ふつう (8 × 8)</Text>
+              <Text style={styles.sizeButtonSub}>全10問 / ちょっと手応え</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.sizeButton, {backgroundColor: '#ef4444'}]} onPress={() => handleSelectSize(10)}>
+              <Text style={styles.sizeButtonText}>むずかしい (10 × 10)</Text>
+              <Text style={styles.sizeButtonSub}>全10問 / じっくり挑戦</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // --- ゲーム画面の描画 ---
+  if (!stage || board.length === 0 || board.length !== numRows || board[0].length !== numCols) return null;
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="light" />
       <View style={styles.header}>
-        <Text style={styles.title}>Pixel Picross</Text>
-        <Text style={styles.subtitle}>イラストロジックパズル (問題外出し・軽量版)</Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => setScreen('menu')}>
+          <Text style={styles.backButtonText}>◀ メニュー</Text>
+        </TouchableOpacity>
+        <View style={styles.headerTitleArea}>
+          <Text style={styles.title}>Pixel Picross</Text>
+          <Text style={styles.subtitle}>第 {currentStageIndex + 1} / {shuffledStages.length} 問目</Text>
+        </View>
+        <View style={{ width: 60 }} /> {/* 左右のバランス用スペーサー */}
       </View>
 
       <ScrollView contentContainerStyle={styles.container}>
-        {/* ステージ切り替え */}
+        {/* ステージ名表示とナビゲーション */}
         <View style={styles.stageSelector}>
-          <Text style={styles.stageTitle}>{stage.name}</Text>
+          <Text style={styles.stageTitle}>{isCleared ? stage.name : '？？？'}</Text>
           <View style={styles.stageButtons}>
-            <TouchableOpacity
-              style={styles.navButton}
-              onPress={() => {
-                const prev = (currentStageIndex - 1 + STAGES.length) % STAGES.length;
-                initGame(prev);
-              }}
-            >
-              <Text style={styles.buttonText}>◀ 前</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.navButton} onPress={() => initGame(currentStageIndex)}>
+            <TouchableOpacity style={styles.navButton} onPress={() => initGame(currentStageIndex, shuffledStages)}>
               <Text style={styles.buttonText}>リセット</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.navButton}
-              onPress={() => {
-                const next = (currentStageIndex + 1) % STAGES.length;
-                initGame(next);
-              }}
-            >
-              <Text style={styles.buttonText}>次 ▶</Text>
-            </TouchableOpacity>
+            {currentStageIndex < shuffledStages.length - 1 && (
+              <TouchableOpacity style={styles.navButton} onPress={() => initGame(currentStageIndex + 1, shuffledStages)}>
+                <Text style={styles.buttonText}>スキップ ▶</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
         {/* パズルボード部分 */}
         <View style={styles.gameArea}>
-          {/* 上部：列のヒント */}
           <View style={styles.colHintsRow}>
-            {/* 左上の空白スペース（行ヒントの幅分あける） */}
             <View style={{ width: hintAreaWidth }} />
             <View style={styles.colHintsContainer}>
               {colHints.map((hints, c) => (
                 <View key={c} style={[styles.colHintCol, { width: cellSize }]}>
-                  {/* 高さを揃えるために空白をパディングする */}
-                  {Array(maxColHintsHeight - hints.length)
-                    .fill(null)
-                    .map((_, i) => (
-                      <View key={`pad-${i}`} style={styles.hintCell} />
-                    ))}
+                  {Array(maxColHintsHeight - hints.length).fill(null).map((_, i) => (
+                    <View key={`pad-${i}`} style={styles.hintCell} />
+                  ))}
                   {hints.map((hint, i) => (
                     <View key={i} style={styles.hintCell}>
                       <Text style={styles.hintText}>{hint}</Text>
@@ -223,18 +268,13 @@ export default function App() {
             </View>
           </View>
 
-          {/* 下部：行ヒント + グリッド盤面 */}
           <View style={styles.boardWithRowHints}>
-            {/* 左：行のヒント */}
             <View style={[styles.rowHintsContainer, { width: hintAreaWidth }]}>
               {rowHints.map((hints, r) => (
                 <View key={r} style={[styles.rowHintRow, { height: cellSize }]}>
-                  {/* 幅を揃えるために左側をパディングする */}
-                  {Array(maxRowHintsLength - hints.length)
-                    .fill(null)
-                    .map((_, i) => (
-                      <View key={`pad-${i}`} style={styles.hintCell} />
-                    ))}
+                  {Array(maxRowHintsLength - hints.length).fill(null).map((_, i) => (
+                    <View key={`pad-${i}`} style={styles.hintCell} />
+                  ))}
                   {hints.map((hint, i) => (
                     <View key={i} style={styles.hintCell}>
                       <Text style={styles.hintText}>{hint}</Text>
@@ -244,7 +284,6 @@ export default function App() {
               ))}
             </View>
 
-            {/* 右：ゲームグリッド */}
             <View style={styles.grid}>
               {board.map((row, r) => (
                 <View key={r} style={styles.gridRow}>
@@ -253,7 +292,7 @@ export default function App() {
                       key={c}
                       style={[
                         styles.cell,
-                        { width: cellSize, height: cellSize }, // 動的サイズを適用
+                        { width: cellSize, height: cellSize },
                         cell === 1 && styles.cellFilled,
                         cell === 2 && styles.cellCross,
                         isCleared && styles.cellCleared,
@@ -272,7 +311,7 @@ export default function App() {
           </View>
         </View>
 
-        {/* コントロール（操作モード切り替え） */}
+        {/* コントロール */}
         <View style={styles.controls}>
           <TouchableOpacity
             style={[styles.modeButton, playMode === 'fill' && styles.modeButtonActive]}
@@ -292,7 +331,6 @@ export default function App() {
           </TouchableOpacity>
         </View>
 
-        {/* クリアメッセージ */}
         {isCleared && (
           <View style={styles.clearBanner}>
             <Text style={styles.clearText}>🎉 STAGE CLEAR! 🎉</Text>
@@ -308,16 +346,79 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#1e293b',
   },
-  header: {
-    paddingTop: 15,
-    paddingBottom: 10,
+  // メニュー用スタイル
+  menuContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  menuTitle: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#38bdf8',
+    marginBottom: 10,
+    letterSpacing: 2,
+  },
+  menuSubtitle: {
+    fontSize: 14,
+    color: '#94a3b8',
+    marginBottom: 40,
+    textAlign: 'center',
+  },
+  menuButtons: {
+    width: '100%',
+    maxWidth: 320,
+  },
+  sizeButton: {
+    paddingVertical: 18,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  sizeButtonText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  sizeButtonSub: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 11,
+    marginTop: 4,
+  },
+  // ゲーム画面用スタイル
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 10,
+    paddingBottom: 10,
+    paddingHorizontal: 10,
     backgroundColor: '#0f172a',
     borderBottomWidth: 1,
     borderBottomColor: '#334155',
   },
+  backButton: {
+    backgroundColor: '#334155',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  backButtonText: {
+    color: '#f8fafc',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  headerTitleArea: {
+    alignItems: 'center',
+  },
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#38bdf8',
   },
@@ -328,7 +429,7 @@ const styles = StyleSheet.create({
   },
   container: {
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 15,
     paddingHorizontal: 10,
   },
   stageSelector: {
@@ -337,48 +438,38 @@ const styles = StyleSheet.create({
     backgroundColor: '#334155',
     borderRadius: 12,
     padding: 12,
-    marginBottom: 20,
+    marginBottom: 15,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
   },
   stageTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#f8fafc',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   stageButtons: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     width: '100%',
   },
   navButton: {
     flex: 1,
     backgroundColor: '#475569',
-    paddingVertical: 8,
+    paddingVertical: 6,
     marginHorizontal: 4,
     borderRadius: 6,
     alignItems: 'center',
   },
   buttonText: {
     color: '#f8fafc',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
   gameArea: {
     backgroundColor: '#0f172a',
     padding: 15,
     borderRadius: 16,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-    elevation: 8,
+    marginBottom: 15,
   },
   colHintsRow: {
     flexDirection: 'row',
@@ -452,13 +543,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: '100%',
     maxWidth: 320,
-    marginBottom: 20,
+    marginBottom: 15,
   },
   modeButton: {
     flex: 1,
     flexDirection: 'row',
     backgroundColor: '#334155',
-    paddingVertical: 14,
+    paddingVertical: 12,
     marginHorizontal: 6,
     borderRadius: 8,
     alignItems: 'center',
@@ -483,7 +574,7 @@ const styles = StyleSheet.create({
     maxWidth: 320,
     backgroundColor: '#10b981',
     borderRadius: 8,
-    paddingVertical: 12,
+    paddingVertical: 10,
     alignItems: 'center',
   },
   clearText: {
