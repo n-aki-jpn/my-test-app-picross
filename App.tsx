@@ -1,68 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Alert, SafeAreaView, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Alert, SafeAreaView, ScrollView, Dimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
-// ステージのデータ定義
-interface Stage {
-  name: string;
-  grid: number[][]; // 0: 空白, 1: 塗るマス
-}
+// 💡 外出ししたステージデータをインポート
+import { STAGES } from './stages';
 
-const STAGES: Stage[] = [
-  {
-    name: 'ハート ❤️',
-    grid: [
-      [0, 1, 0, 1, 0],
-      [1, 1, 1, 1, 1],
-      [1, 1, 1, 1, 1],
-      [0, 1, 1, 1, 0],
-      [0, 0, 1, 0, 0],
-    ],
-  },
-  {
-    name: '十字架 ✝️',
-    grid: [
-      [0, 0, 1, 0, 0],
-      [0, 0, 1, 0, 0],
-      [1, 1, 1, 1, 1],
-      [0, 0, 1, 0, 0],
-      [0, 0, 1, 0, 0],
-    ],
-  },
-  {
-    name: 'チェック柄 🏁',
-    grid: [
-      [1, 0, 1, 0, 1],
-      [0, 1, 0, 1, 0],
-      [1, 0, 1, 0, 1],
-      [0, 1, 0, 1, 0],
-      [1, 0, 1, 0, 1],
-    ],
-  },
-  {
-    name: 'スマイル 🙂',
-    grid: [
-      [1, 0, 0, 0, 1],
-      [0, 0, 0, 0, 0],
-      [1, 0, 0, 0, 1],
-      [0, 1, 1, 1, 0],
-      [0, 0, 0, 0, 0],
-    ],
-  },
-  {
-    name: 'インベーダー 👾',
-    grid: [
-      [1, 0, 0, 0, 1],
-      [0, 1, 1, 1, 0],
-      [1, 1, 0, 1, 1],
-      [1, 1, 1, 1, 1],
-      [0, 1, 0, 1, 0],
-    ],
-  },
-];
+// 画面の横幅を取得
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-// セルの状態
-// 0: 空白, 1: 塗りつぶし, 2: バツ
+// セルの状態。0: 空白, 1: 塗りつぶし, 2: バツ
 type CellState = 0 | 1 | 2;
 
 // 操作モード
@@ -75,14 +21,24 @@ export default function App() {
   const [isCleared, setIsCleared] = useState(false);
 
   const stage = STAGES[currentStageIndex];
-  const size = stage.grid.length; // 5
+  
+  // 💡 追加：外出しされた文字列の配列を、ロジックが扱える0と1の2次元配列に自動変換する
+  const stageGrid = stage.pattern.map(row => 
+    row.split('').map(char => char === '#' ? 1 : 0)
+  );
+
+  // 盤面の縦横サイズを動的に取得
+  const numRows = stageGrid.length;
+  const numCols = stageGrid[0].length;
 
   // 新しいステージのロード
   const initGame = (stageIndex: number) => {
     const s = STAGES[stageIndex];
-    const initialBoard = Array(s.grid.length)
+    // 切り替え先のステージの文字列パターンを0/1配列に変換してサイズを計測
+    const sGrid = s.pattern.map(row => row.split('').map(char => char === '#' ? 1 : 0));
+    const initialBoard = Array(sGrid.length)
       .fill(null)
-      .map(() => Array(s.grid[0].length).fill(0));
+      .map(() => Array(sGrid[0].length).fill(0));
     setBoard(initialBoard);
     setIsCleared(false);
     setCurrentStageIndex(stageIndex);
@@ -138,12 +94,18 @@ export default function App() {
     return colHints;
   };
 
-  const rowHints = getRowHints(stage.grid);
-  const colHints = getColHints(stage.grid);
+  const rowHints = getRowHints(stageGrid);
+  const colHints = getColHints(stageGrid);
 
   // 最大のヒント数を取得 (レイアウト調整用)
   const maxRowHintsLength = Math.max(...rowHints.map((h) => h.length));
   const maxColHintsHeight = Math.max(...colHints.map((h) => h.length));
+
+  // 動的サイズ計算：画面幅に収まるようマスのサイズ(cellSize)を自動決定
+  const hintAreaWidth = maxRowHintsLength * 16 + 10; // 行ヒントの幅
+  const paddingOffset = 50; // 全体の左右マージン等
+  const availableWidth = SCREEN_WIDTH - paddingOffset - hintAreaWidth;
+  const cellSize = Math.min(44, Math.floor(availableWidth / numCols)); // 最大44、細かくなったら縮小
 
   // マスをタップしたときの処理
   const handleCellPress = (r: number, c: number) => {
@@ -153,10 +115,8 @@ export default function App() {
     const currentVal = board[r][c];
 
     if (playMode === 'fill') {
-      // 塗りつぶしモード
       newBoard[r][c] = currentVal === 1 ? 0 : 1;
     } else {
-      // バツモード
       newBoard[r][c] = currentVal === 2 ? 0 : 2;
     }
 
@@ -164,17 +124,14 @@ export default function App() {
     checkClear(newBoard);
   };
 
-  // クリア判定
+  // クリア判定 (長方形や10x10にも対応できるようnumRows, numColsを使用)
   const checkClear = (currentBoard: CellState[][]) => {
     let clear = true;
-    for (let r = 0; r < size; r++) {
-      for (let c = 0; c < size; c++) {
-        const target = stage.grid[r][c]; // 1: 要塗り, 0: 塗らない
+    for (let r = 0; r < numRows; r++) {
+      for (let c = 0; c < numCols; c++) {
+        const target = stageGrid[r][c];
         const player = currentBoard[r][c];
 
-        // プレイヤーが「1(塗りつぶし)」にしている場所が、正解の「1」と一致している必要がある。
-        // 正解が0のところを塗りつぶしていたり、正解が1のところを塗りつぶしていなかったらアウト。
-        // （バツは正解判定に直接影響しない。0でも2でも、塗りつぶされていなければOK）
         const playerFilled = player === 1;
         const targetFilled = target === 1;
 
@@ -201,12 +158,15 @@ export default function App() {
     }
   };
 
+  // 💡 ステージ切り替え時の盤面初期化ラグによる配列インデックスエラーを防ぐ安全処理
+  if (board.length === 0 || board.length !== numRows || board[0].length !== numCols) return null;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="light" />
       <View style={styles.header}>
         <Text style={styles.title}>Pixel Picross</Text>
-        <Text style={styles.subtitle}>イラストロジックパズル</Text>
+        <Text style={styles.subtitle}>イラストロジックパズル (問題外出し・軽量版)</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.container}>
@@ -243,10 +203,10 @@ export default function App() {
           {/* 上部：列のヒント */}
           <View style={styles.colHintsRow}>
             {/* 左上の空白スペース（行ヒントの幅分あける） */}
-            <View style={{ width: maxRowHintsLength * 16 + 10 }} />
+            <View style={{ width: hintAreaWidth }} />
             <View style={styles.colHintsContainer}>
               {colHints.map((hints, c) => (
-                <View key={c} style={styles.colHintCol}>
+                <View key={c} style={[styles.colHintCol, { width: cellSize }]}>
                   {/* 高さを揃えるために空白をパディングする */}
                   {Array(maxColHintsHeight - hints.length)
                     .fill(null)
@@ -266,9 +226,9 @@ export default function App() {
           {/* 下部：行ヒント + グリッド盤面 */}
           <View style={styles.boardWithRowHints}>
             {/* 左：行のヒント */}
-            <View style={[styles.rowHintsContainer, { width: maxRowHintsLength * 16 + 10 }]}>
+            <View style={[styles.rowHintsContainer, { width: hintAreaWidth }]}>
               {rowHints.map((hints, r) => (
-                <View key={r} style={styles.rowHintRow}>
+                <View key={r} style={[styles.rowHintRow, { height: cellSize }]}>
                   {/* 幅を揃えるために左側をパディングする */}
                   {Array(maxRowHintsLength - hints.length)
                     .fill(null)
@@ -293,6 +253,7 @@ export default function App() {
                       key={c}
                       style={[
                         styles.cell,
+                        { width: cellSize, height: cellSize }, // 動的サイズを適用
                         cell === 1 && styles.cellFilled,
                         cell === 2 && styles.cellCross,
                         isCleared && styles.cellCleared,
@@ -300,7 +261,9 @@ export default function App() {
                       activeOpacity={0.7}
                       onPress={() => handleCellPress(r, c)}
                     >
-                      {cell === 2 && <Text style={styles.crossText}>×</Text>}
+                      {cell === 2 && (
+                        <Text style={[styles.crossText, { fontSize: cellSize * 0.5 }]}>×</Text>
+                      )}
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -343,7 +306,7 @@ export default function App() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#1e293b', // ダークブルーグレー
+    backgroundColor: '#1e293b',
   },
   header: {
     paddingTop: 15,
@@ -356,7 +319,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#38bdf8', // ライトブルー
+    color: '#38bdf8',
   },
   subtitle: {
     fontSize: 12,
@@ -425,10 +388,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   colHintCol: {
-    width: 44, // セル幅と同じ
     alignItems: 'center',
     justifyContent: 'flex-end',
-    marginHorizontal: 1,
+    marginHorizontal: 0.5,
   },
   rowHintsContainer: {
     justifyContent: 'center',
@@ -436,11 +398,10 @@ const styles = StyleSheet.create({
     paddingRight: 6,
   },
   rowHintRow: {
-    height: 44, // セル高さと同じ
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    marginVertical: 1,
+    marginVertical: 0.5,
   },
   hintCell: {
     width: 16,
@@ -467,24 +428,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   cell: {
-    width: 44,
-    height: 44,
     borderWidth: 1,
     borderColor: '#334155',
     backgroundColor: '#1e293b',
     alignItems: 'center',
     justifyContent: 'center',
-    margin: 1,
   },
   cellFilled: {
-    backgroundColor: '#38bdf8', // 塗りつぶし色
+    backgroundColor: '#38bdf8',
   },
   cellCross: {
     backgroundColor: '#1e293b',
   },
   crossText: {
-    color: '#ef4444', // バツは赤
-    fontSize: 22,
+    color: '#ef4444',
     fontWeight: 'bold',
   },
   cellCleared: {
@@ -510,7 +467,7 @@ const styles = StyleSheet.create({
     borderColor: '#475569',
   },
   modeButtonActive: {
-    backgroundColor: '#0284c7', // アクティブなモード色
+    backgroundColor: '#0284c7',
     borderColor: '#38bdf8',
   },
   modeButtonText: {
@@ -524,7 +481,7 @@ const styles = StyleSheet.create({
   clearBanner: {
     width: '100%',
     maxWidth: 320,
-    backgroundColor: '#10b981', // 緑
+    backgroundColor: '#10b981',
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
