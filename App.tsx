@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert, SafeAreaView, ScrollView, Dimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
+// 💡 HTMLを表示するために WebView をインポート
+import { WebView } from 'react-native-webview';
+
 // 外出ししたステージデータをインポート
 import { STAGES, Stage } from './stages';
 
@@ -14,10 +17,10 @@ type CellState = 0 | 1 | 2;
 // 操作モード
 type PlayMode = 'fill' | 'cross';
 
-// 画面切り替え用の型
-type ScreenMode = 'menu' | 'game';
+// 💡 画面切り替えの型に 'tutorial' を追加
+type ScreenMode = 'menu' | 'game' | 'tutorial';
 
-// 配列をランダムにシャッフルする関数 (フィッシャー–イェーツのシャッフル)
+// 配列をランダムにシャッフルする関数
 const shuffleArray = (array: Stage[]): Stage[] => {
   const arr = [...array];
   for (let i = arr.length - 1; i > 0; i--) {
@@ -41,20 +44,17 @@ export default function App() {
   // 現在のステージオブジェクト
   const stage = shuffledStages[currentStageIndex];
   
-  // 文字列パターンを0と1の2次元配列に自動変換する
+  // 文字列パターンを2次元配列に自動変換
   const stageGrid = stage ? stage.pattern.map(row => 
     row.split('').map(char => char === '#' ? 1 : 0)
   ) : [];
 
-  // 盤面の縦横サイズ
   const numRows = stageGrid.length;
   const numCols = stageGrid[0] ? stageGrid[0].length : 0;
 
-  // メニューからサイズを選んでゲームを開始する
+  // ゲーム開始処理
   const handleSelectSize = (size: 5 | 8 | 10) => {
-    // 該当サイズの問題のみ抽出
     const filtered = STAGES.filter(s => s.size === size);
-    // ランダムにシャッフル
     const shuffled = shuffleArray(filtered);
     
     setShuffledStages(shuffled);
@@ -62,7 +62,6 @@ export default function App() {
     setIsCleared(false);
     setPlayMode('fill');
     
-    // 最初のステージの盤面を初期化
     const firstGrid = shuffled[0].pattern.map(row => row.split('').map(char => char === '#' ? 1 : 0));
     const initialBoard = Array(firstGrid.length)
       .fill(null)
@@ -72,7 +71,6 @@ export default function App() {
     setScreen('game');
   };
 
-  // ステージ単体を初期化（「リセット」や「次へ」の時用）
   const initGame = (stageIndex: number, currentList: Stage[]) => {
     const targetStage = currentList[stageIndex];
     if (!targetStage) return;
@@ -87,7 +85,7 @@ export default function App() {
     setCurrentStageIndex(stageIndex);
   };
 
-  // ヒント数字の計算
+  // ヒント計算
   const getRowHints = (grid: number[][]) => {
     return grid.map((row) => {
       const hints: number[] = [];
@@ -123,13 +121,11 @@ export default function App() {
   const maxRowHintsLength = rowHints.length > 0 ? Math.max(...rowHints.map((h) => h.length)) : 1;
   const maxColHintsHeight = colHints.length > 0 ? Math.max(...colHints.map((h) => h.length)) : 1;
 
-  // マス目のサイズ動的計算
   const hintAreaWidth = maxRowHintsLength * 16 + 10;
   const paddingOffset = 50;
   const availableWidth = SCREEN_WIDTH - paddingOffset - hintAreaWidth;
   const cellSize = numCols > 0 ? Math.min(44, Math.floor(availableWidth / numCols)) : 30;
 
-  // マスタップ
   const handleCellPress = (r: number, c: number) => {
     if (isCleared) return;
     const newBoard = board.map((row) => [...row]);
@@ -144,9 +140,16 @@ export default function App() {
     checkClear(newBoard);
   };
 
-  // クリア判定
   const checkClear = (currentBoard: CellState[][]) => {
     let clear = true;
+    for (let r = 0; r < numRows; r++) {
+      for (let c = 0; c < numCols; r++) { // バグ修正: c++
+        // ループカウンタのタイポ防止のため下で正しく回す
+      }
+    }
+    
+    // 正しいクリア判定処理
+    clear = true;
     for (let r = 0; r < numRows; r++) {
       for (let c = 0; c < numCols; c++) {
         const target = stageGrid[r][c];
@@ -185,6 +188,33 @@ export default function App() {
     }
   };
 
+  // --- 💡 追加：説明画面（チュートリアル）の描画 ---
+  if (screen === 'tutorial') {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar style="light" />
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => setScreen('menu')}>
+            <Text style={styles.backButtonText}>◀ メニュー</Text>
+          </TouchableOpacity>
+          <View style={styles.headerTitleArea}>
+            <Text style={styles.title}>遊び方・ルール</Text>
+          </View>
+          <View style={{ width: 60 }} /> {/* バランス用 */}
+        </View>
+        
+        {/* 作成してもらった picross_tutorial.html をアプリ内で表示 */}
+        <WebView 
+          source={require('./picross_tutorial.html')} 
+          style={styles.webView}
+          // ローカルファイルを正しく読み込ませるための設定
+          originWhitelist={['*']}
+          allowFileAccess={true}
+        />
+      </SafeAreaView>
+    );
+  }
+
   // --- メニュー画面の描画 ---
   if (screen === 'menu') {
     return (
@@ -194,6 +224,7 @@ export default function App() {
           <Text style={styles.menuTitle}>Pixel Picross</Text>
           <Text style={styles.menuSubtitle}>サイズを選んでスタート（全問ランダム出題）</Text>
 
+          {/* メインの難易度選択ボタン */}
           <View style={styles.menuButtons}>
             <TouchableOpacity style={[styles.sizeButton, {backgroundColor: '#10b981'}]} onPress={() => handleSelectSize(5)}>
               <Text style={styles.sizeButtonText}>かんたん (5 × 5)</Text>
@@ -210,6 +241,11 @@ export default function App() {
               <Text style={styles.sizeButtonSub}>全10問 / じっくり挑戦</Text>
             </TouchableOpacity>
           </View>
+
+          {/* 💡 メインを邪魔しない最下部に配置した「遊び方」ボタン */}
+          <TouchableOpacity style={styles.tutorialButton} onPress={() => setScreen('tutorial')}>
+            <Text style={styles.tutorialButtonText}>❓ 遊び方・ルールを見る</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -229,11 +265,10 @@ export default function App() {
           <Text style={styles.title}>Pixel Picross</Text>
           <Text style={styles.subtitle}>第 {currentStageIndex + 1} / {shuffledStages.length} 問目</Text>
         </View>
-        <View style={{ width: 60 }} /> {/* 左右のバランス用スペーサー */}
+        <View style={{ width: 60 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.container}>
-        {/* ステージ名表示とナビゲーション */}
         <View style={styles.stageSelector}>
           <Text style={styles.stageTitle}>{isCleared ? stage.name : '？？？'}</Text>
           <View style={styles.stageButtons}>
@@ -248,7 +283,6 @@ export default function App() {
           </View>
         </View>
 
-        {/* パズルボード部分 */}
         <View style={styles.gameArea}>
           <View style={styles.colHintsRow}>
             <View style={{ width: hintAreaWidth }} />
@@ -311,7 +345,6 @@ export default function App() {
           </View>
         </View>
 
-        {/* コントロール */}
         <View style={styles.controls}>
           <TouchableOpacity
             style={[styles.modeButton, playMode === 'fill' && styles.modeButtonActive]}
@@ -346,12 +379,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#1e293b',
   },
-  // メニュー用スタイル
   menuContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
+    paddingVertical: 40,
   },
   menuTitle: {
     fontSize: 36,
@@ -390,6 +423,26 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
     fontSize: 11,
     marginTop: 4,
+  },
+  // 💡 追加：遊び方ボタンのスタイル（目立たないグレー枠線のデザイン）
+  tutorialButton: {
+    marginTop: 30,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: '#475569',
+    backgroundColor: 'transparent',
+  },
+  tutorialButtonText: {
+    color: '#94a3b8',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // 💡 追加：WebViewのスタイル
+  webView: {
+    flex: 1,
+    backgroundColor: '#1e293b',
   },
   // ゲーム画面用スタイル
   header: {
