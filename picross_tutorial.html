@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>【図解】5分でわかる！ピクロスのあそび方講座</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f7f9fa;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border-bottom: 5px solid #3498db;
+        }
+        h2 {
+            color: #2e86de;
+            border-left: 5px solid #2e86de;
+            padding-left: 10px;
+            margin-top: 40px;
+        }
+        h3 {
+            color: #576574;
+            margin-top: 25px;
+        }
+        p {
+            font-size: 1.05rem;
+        }
+        .highlight {
+            background: linear-gradient(transparent 60%, #ffefa0 60%);
+            font-weight: bold;
+        }
+        .important {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        /* 図解用グリッドのスタイル */
+        .diagram-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin: 20px 0;
+        }
+        .grid-5x5 {
+            display: grid;
+            grid-template-columns: 40px repeat(5, 40px);
+            gap: 2px;
+            background-color: #ccc;
+            padding: 2px;
+            border-radius: 4px;
+        }
+        .cell {
+            width: 40px;
+            height: 40px;
+            background-color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .cell.hint-top {
+            background-color: #e8f4fd;
+            color: #2e86de;
+            flex-direction: column;
+            font-size: 12px;
+            line-height: 1.1;
+        }
+        .cell.hint-left {
+            background-color: #f1f2f6;
+            color: #576574;
+            font-size: 12px;
+        }
+        .cell.fill {
+            background-color: #2c3e50;
+            color: #fff;
+        }
+        .cell.batsu {
+            color: #e74c3c;
+            font-size: 20px;
+        }
+        .cell.corner {
+            background-color: #f1f2f6;
+        }
+        .caption {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 10px;
+            text-align: center;
+        }
+        .point-box {
+            background-color: #e8f4fd;
+            border: 2px dashed #3498db;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .point-title {
+            font-weight: bold;
+            color: #2980b9;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🧩 【図解】5分でわかる！<br>ピクロスのあそび方講座</h1>
+
+    <p>ピクロス（お絵かきロジック）は、数字のヒントをたよりにマスをぬりつぶしていくと、さいごに<span class="highlight">「ドット絵」がうかびあがる不思議なパズル</span>です！</p>
+    <p>ルールはとってもシンプル。次の3つのルールさえおぼえれば、だれでもすぐに解けるようになります！</p>
+
+    ---
+
+    <h2>① ピクロスの「3大ルール」</h2>
+    
+    <h3>ルール1：数字のぶんだけ「連続」でぬる</h3>
+    <p>横や縦にある数字は、<b>「その列で、続けてぬるマスの数」</b>を表しています。<br>
+    例えば、数字が「<span class="important">5</span>」なら、5マス連続で黒くぬりつぶします。</p>
+
+    <h3>ルール2：数字が2つ以上あるときは「あいだを1マス以上あける」</h3>
+    <p>数字が「<span class="important">2  1</span>」のように並んでいるときは、<b>「まず2マス連続でぬり、1マス以上あけてから、1マスぬる」</b>という意味になります。ピタッとくっつけてぬってはいけません！</p>
+
+    <h3>ルール3：ぬらないマスには「×（バツ）」をつける</h3>
+    <p>「ここは絶対にぬらないぞ！」とわかったマスには、まちがえてぬらないように<b>×印</b>をつけます。これが、パズルをスラスラ解く一番のコツです！</p>
+
+    ---
+
+    <h2>② 図解：実際に解く流れを見てみよう！ (5×5サイズ)</h2>
+    <p>数字のヒントをもとに、どうやってマスがうまっていくか見てみましょう。</p>
+
+    <h3>ステップ1：一番大きい数字「5」を見つけよう！</h3>
+    <p>5×5のマス目で「5」という数字があったら大チャンス！そこは<b>全部ぬるマス</b>です。</p>
+
+    <div class="diagram-container">
+        <div class="grid-5x5">
+            <div class="cell corner"></div>
+            <div class="cell hint-top"><div>1</div><div>1</div></div>
+            <div class="cell hint-top"><div>3</div></div>
+            <div class="cell hint-top"><div>5</div></div>
+            <div class="cell hint-top"><div>3</div></div>
+            <div class="cell hint-top"><div>1</div><div>1</div></div>
+            
+            <div class="cell hint-left">1</div>
+            <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+            
+            <div class="cell hint-left">3</div>
+            <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+            
+            <div class="cell hint-left">5</div>
+            <div class="cell fill"></div><div class="cell fill"></div><div class="cell fill"></div><div class="cell fill"></div><div class="cell fill"></div>
+            
+            <div class="cell hint-left">3</div>
+            <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+            
+            <div class="cell hint-left">1</div>
+            <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+        </div>
+        <div class="caption">▲ 左側のヒントが「5」の行は、5マス全部を黒くぬりつぶせばOK！</div>
+    </div>
+
+    <h3>ステップ2：縦のヒントも見てみよう！</h3>
+    <p>真ん中の列の上のヒントを見ると「5」になっています。ここも上から下まで全部ぬれますね！<br>
+    さらに、両はしの列のヒントは「1 1」です。すでに1マスぬれているので、<b>その上下は絶対にぬらない（＝×をつける）</b>ことがわかります！</p>
+
+    <div class="diagram-container">
+        <div class="grid-5x5">
+            <div class="cell corner"></div>
+            <div class="cell hint-top"><div>1</div><div>1</div></div>
+            <div class="cell hint-top"><div>3</div></div>
+            <div class="cell hint-top"><div>5</div></div>
+            <div class="cell hint-top"><div>3</div></div>
+            <div class="cell hint-top"><div>1</div><div>1</div></div>
+            
+            <div class="cell hint-left">1</div>
+            <div class="cell batsu">×</div><div class="cell"></div><div class="cell fill"></div><div class="cell"></div><div class="cell batsu">×</div>
+            
+            <div class="cell hint-left">3</div>
+            <div class="cell"></div><div class="cell"></div><div class="cell fill"></div><div class="cell"></div><div class="cell"></div>
+            
+            <div class="cell hint-left">5</div>
+            <div class="cell fill"></div><div class="cell fill"></div><div class="cell fill"></div><div class="cell fill"></div><div class="cell fill"></div>
+            
+            <div class="cell hint-left">3</div>
+            <div class="cell"></div><div class="cell"></div><div class="cell fill"></div><div class="cell"></div><div class="cell"></div>
+            
+            <div class="cell hint-left">1</div>
+            <div class="cell batsu">×</div><div class="cell"></div><div class="cell fill"></div><div class="cell"></div><div class="cell batsu">×</div>
+        </div>
+        <div class="caption">▲ 縦の「5」をぬり、これ以上ぬらない場所に「×」をつけました。</div>
+    </div>
+
+    <h3>ステップ3：さいごの仕上げ！</h3>
+    <p>残りのヒント「3」に合わせてマスをぬると……可愛い「<b>星（☆）の半分</b>」のような形（今回はクロス型）が完成します！</p>
+
+    <div class="diagram-container">
+        <div class="grid-5x5">
+            <div class="cell corner"></div>
+            <div class="cell hint-top"><div>1</div><div>1</div></div>
+            <div class="cell hint-top"><div>3</div></div>
+            <div class="cell hint-top"><div>5</div></div>
+            <div class="cell hint-top"><div>3</div></div>
+            <div class="cell hint-top"><div>1</div><div>1</div></div>
+            
+            <div class="cell hint-left">1</div>
+            <div class="cell batsu">×</div><div class="cell batsu">×</div><div class="cell fill"></div><div class="cell batsu">×</div><div class="cell batsu">×</div>
+            
+            <div class="cell hint-left">3</div>
+            <div class="cell batsu">×</div><div class="cell fill"></div><div class="cell fill"></div><div class="cell fill"></div><div class="cell batsu">×</div>
+            
+            <div class="cell hint-left">5</div>
+            <div class="cell fill"></div><div class="cell fill"></div><div class="cell fill"></div><div class="cell fill"></div><div class="cell fill"></div>
+            
+            <div class="cell hint-left">3</div>
+            <div class="cell batsu">×</div><div class="cell fill"></div><div class="cell fill"></div><div class="cell fill"></div><div class="cell batsu">×</div>
+            
+            <div class="cell hint-left">1</div>
+            <div class="cell batsu">×</div><div class="cell batsu">×</div><div class="cell fill"></div><div class="cell batsu">×</div><div class="cell batsu">×</div>
+        </div>
+        <div class="caption">🎉 すべての計算が合って、きれいな「十字（クロス）」の絵が完成！</div>
+    </div>
+
+    ---
+
+    <div class="point-box">
+        <div class="point-title">💡 今回つくる「ナンバーサム・ピクロス」ではどうなる？</div>
+        <p>普通のピクロスは「連続する数（例：3マス）」がヒントですが、君が開発するゲームでは<b>「マスの数字を足した合計（例：15）」</b>がヒントになります！</p>
+        <p>「どの数字を組み合わせたらピッタリの合計になって、しかもきれいな絵ができるかな？」を考える、世界にひとつだけのレベルアップした新しいパズルゲームになります！プロトタイプ作成、がんばろう！</p>
+    </div>
+
+</body>
+</html>

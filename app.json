@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "my-test-app",
+    "name": "my-test-app-",
     "slug": "my-test-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -19,6 +19,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
+      "baseUrl": "/my-test-app-picross",
       "favicon": "./assets/favicon.png"
     }
   }
