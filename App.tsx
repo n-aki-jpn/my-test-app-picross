@@ -212,17 +212,17 @@ export default function App() {
           <View style={styles.menuButtons}>
             <TouchableOpacity style={[styles.sizeButton, {backgroundColor: '#10b981'}]} onPress={() => handleSelectSize(5)}>
               <Text style={styles.sizeButtonText}>かんたん (5 × 5)</Text>
-              <Text style={styles.sizeButtonSub}>全10問 / サクッと遊べる</Text>
+              <Text style={styles.sizeButtonSub}>全12問 / サクッと遊べる</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.sizeButton, {backgroundColor: '#f59e0b'}]} onPress={() => handleSelectSize(8)}>
               <Text style={styles.sizeButtonText}>ふつう (8 × 8)</Text>
-              <Text style={styles.sizeButtonSub}>全10問 / ちょっと手応え</Text>
+              <Text style={styles.sizeButtonSub}>全13問 / ちょっと手応え</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={[styles.sizeButton, {backgroundColor: '#ef4444'}]} onPress={() => handleSelectSize(10)}>
               <Text style={styles.sizeButtonText}>むずかしい (10 × 10)</Text>
-              <Text style={styles.sizeButtonSub}>全10問 / じっくり挑戦</Text>
+              <Text style={styles.sizeButtonSub}>全13問 / じっくり挑戦</Text>
             </TouchableOpacity>
           </View>
 
